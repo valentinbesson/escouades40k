@@ -29,5 +29,6 @@ jobs:
             echo "Aucun changement."
           else
             git commit -m "Mise à jour des données BSData"
+            git pull --rebase origin main
             git push
           fi
