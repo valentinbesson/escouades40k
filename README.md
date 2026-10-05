@@ -1,8 +1,8 @@
 # Escouades 40K
 
-Calculateur de points d'escouade pour **Warhammer 40,000 (10e édition)**, installable sur iPhone/iPad
+Calculateur de points d'escouade pour **Warhammer 40,000 (11e édition)**, installable sur iPhone/iPad
 et utilisable hors ligne. Les données viennent du projet communautaire
-[BSData](https://github.com/BSData/wh40k-10e) et sont mises à jour chaque semaine par GitHub Actions.
+[BSData](https://github.com/BSData/wh40k-11e) et sont mises à jour chaque semaine par GitHub Actions.
 
 ## Mise en ligne (GitHub Pages)
 

@@ -186,12 +186,13 @@
   }
 
   /* ---------- Vue : recherche ---------- */
-  const F = { q: "", type: "", faction: "", legends: false, limit: 40 };
+  const F = { q: "", type: "", faction: db.faction || "", legends: false, limit: 40 };
   let target = null;
 
   function viewSearch(squadParam) {
     target = squadParam && getSquad(squadParam) ? squadParam : (getSquad(db.last) ? db.last : "__new");
     const factions = [...new Set(units.map((u) => u.faction))].sort();
+    if (F.faction && !factions.includes(F.faction)) F.faction = "";
     const types = [...new Set(units.map((u) => u.type))].sort((a, b) => typeLabel(a).localeCompare(typeLabel(b), "fr"));
     const squadOpts = db.squads.map((s) => '<option value="' + s.id + '"' + (s.id === target ? " selected" : "") + ">" + esc(s.name) + "</option>").join("") +
       '<option value="__new"' + (target === "__new" ? " selected" : "") + ">+ Nouvelle escouade</option>";
@@ -211,7 +212,7 @@
       const bind = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
       bind("f-q", "input", (e) => { F.q = e.target.value; F.limit = 40; results(); });
       bind("f-type", "change", (e) => { F.type = e.target.value; F.limit = 40; results(); });
-      bind("f-faction", "change", (e) => { F.faction = e.target.value; F.limit = 40; results(); });
+      bind("f-faction", "change", (e) => { F.faction = e.target.value; db.faction = F.faction; save(); F.limit = 40; results(); });
       bind("f-legends", "change", (e) => { F.legends = e.target.checked; F.limit = 40; results(); });
       bind("f-target", "change", (e) => { target = e.target.value; results(); });
       results();
