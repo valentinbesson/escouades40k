@@ -62,6 +62,21 @@ def size_range(unit):
     return mn, max(mx, mn)
 
 
+def model_entries(unit):
+    """Figurines (type model) directement sous l'unité ou dans ses groupes."""
+    out = [e for e in unit.get("selectionEntries", []) if e.get("type") == "model"]
+    for g in unit.get("selectionEntryGroups", []):
+        out += [e for e in g.get("selectionEntries", []) if e.get("type") == "model"]
+    return out
+
+
+def per_model_cost(unit):
+    """Coût par figurine quand l'unité n'a pas de coût propre (ex. Carnifex, Starfangs)."""
+    costs = {pts_of(m)[0] for m in model_entries(unit)}
+    costs.discard(0)
+    return costs.pop() if len(costs) == 1 else 0
+
+
 def own_modifiers(entry):
     """Modificateurs de l'entrée elle-même (y compris groupes de modificateurs), pas de ses enfants."""
     out = list(entry.get("modifiers", []))
@@ -165,7 +180,10 @@ def main():
                     not any(p.get("typeName") == "Unit" for p in e.get("profiles", [])):
                 continue
             base, tid = pts_of(e)
-            if base <= 0:
+            per_model = 0
+            if base <= 0 and e.get("type") == "unit":
+                per_model = per_model_cost(e)
+            if base <= 0 and not per_model:
                 continue
             utype, battleline = type_of(e)
             if utype is None:
@@ -180,12 +198,17 @@ def main():
             seen.add(key)
             mn, mx = size_range(e)
             tiers = tiers_of(e, tid)
-            if tiers:
+            if per_model:
+                # Points = nombre de figurines x coût par figurine
+                sizes = list(range(mn, mx + 1)) if mx - mn <= 11 else [mn, mx]
+                ladder = [{"from": n, "pts": n * per_model} for n in sizes]
+            elif tiers:
                 # Règle : l'effectif maximal est le double du minimum, et le
                 # premier palier de points s'applique à partir de (minimum + 1).
                 mn = tiers[0][0] - 1
                 mx = max(2 * mn, tiers[-1][0])
-            ladder = [{"from": mn, "pts": base}] + [{"from": t, "pts": p} for t, p in tiers if t > mn]
+            if not per_model:
+                ladder = [{"from": mn, "pts": base}] + [{"from": t, "pts": p} for t, p in tiers if t > mn]
             if mx < ladder[-1]["from"]:
                 mx = ladder[-1]["from"]
             units.append({
