@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Télécharger BSData (Warhammer 40,000 10e)
-        run: git clone --depth 1 https://github.com/BSData/wh40k-10e.git /tmp/bsdata
+        run: git clone --depth 1 https://github.com/BSData/wh40k-11e.git /tmp/bsdata
 
       - name: Générer data/units.json
         run: python3 scripts/build_units.py /tmp/bsdata data/units.json
