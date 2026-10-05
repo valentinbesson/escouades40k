@@ -1,10 +1,10 @@
 /* Service worker : permet l'utilisation hors ligne.
    Stratégie : on répond tout de suite depuis le cache, et on met à jour le cache
    en arrière-plan (la nouvelle version est donc visible au lancement suivant). */
-const CACHE = "escouades40k-v1";
+const CACHE = "escouades40k-v2";
 const SHELL = [
   "./", "index.html", "style.css", "app.js", "manifest.webmanifest",
-  "data/units.json", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
+  "data/units.json", "data/noms-fr.json", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
 ];
 
 self.addEventListener("install", (e) => {

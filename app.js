@@ -60,8 +60,23 @@
       meta = { count: data.count, generated: data.generated, game: data.game };
       byId = new Map(units.map((u) => [u.id, u]));
       loadError = false;
-    } catch (e) { loadError = true; }
+    } catch (e) { loadError = true; return; }
+    // Noms français (facultatif) : data/noms-fr.json
+    try {
+      const res = await fetch("data/noms-fr.json");
+      const fr = res.ok ? await res.json() : {};
+      units.forEach((u) => {
+        const v = fr[u.name];
+        u.fr = v ? v.split("|").map((x) => x.trim()).filter(Boolean) : [];
+        u.hay = norm([u.name].concat(u.fr).join(" "));
+      });
+    } catch (e) {
+      units.forEach((u) => { u.fr = []; u.hay = norm(u.name); });
+    }
   }
+  // Titre affiché : nom français s'il existe, sinon nom anglais
+  const titleOf = (u) => (u.fr && u.fr[0]) || u.name;
+  const subOf = (u) => (u.fr && u.fr[0] && norm(u.fr[0]) !== norm(u.name) ? " · " + u.name : "");
 
   /* ---------- Calculs ---------- */
   function tierLabel(u, i) {
@@ -147,8 +162,8 @@
           u.pts.map((t, i) => '<option value="' + i + '"' + (i === it.tier ? " selected" : "") + ">" + tierLabel(u, i) + " · " + t.pts + " pts</option>").join("") + "</select>"
         : '<span class="muted">' + tierLabel(u, 0) + " · " + u.pts[0].pts + " pts</span>";
       return '<div class="card item"><div class="ico">' + icon(u.type) + "</div>" +
-        '<div class="info"><div class="title">' + esc(u.name) + "</div>" +
-        '<div class="meta">' + esc(typeLabel(u.type)) + " · " + esc(u.faction) + "</div>" +
+        '<div class="info"><div class="title">' + esc(titleOf(u)) + "</div>" +
+        '<div class="meta">' + esc(typeLabel(u.type)) + " · " + esc(u.faction) + esc(subOf(u)) + "</div>" +
         '<div class="line-pts">' + itemPts(it) + " pts</div></div>" +
         '<div class="controls">' + tierSel +
         '<div class="stepper"><button data-act="dec" data-uid="' + it.uid + '" aria-label="Moins"' + (it.qty <= 1 ? " disabled" : "") + ">−</button>" +
@@ -185,7 +200,7 @@
       (loadError ? '<p class="empty">Données indisponibles. Connecte-toi une première fois pour les télécharger.</p>' :
       '<div class="filters">' +
       '<div class="target"><label for="f-target">Ajouter à</label><select class="field" id="f-target">' + squadOpts + "</select></div>" +
-      '<input class="field" id="f-q" type="search" placeholder="Nom (ex. Boyz, Intercessor…)" value="' + esc(F.q) + '" autocomplete="off">' +
+      '<input class="field" id="f-q" type="search" placeholder="Nom (ex. Bizarboy, Boyz, Intercessors…)" value="' + esc(F.q) + '" autocomplete="off">' +
       '<div class="row"><select class="field" id="f-type" aria-label="Type"><option value="">Tous les types</option>' +
       types.map((t) => '<option value="' + t + '"' + (F.type === t ? " selected" : "") + ">" + esc(typeLabel(t)) + "</option>").join("") + "</select>" +
       '<select class="field" id="f-faction" aria-label="Collection"><option value="">Toutes les collections</option>' +
@@ -204,12 +219,12 @@
   }
 
   function filtered() {
-    const q = norm(F.q.trim());
+    const qWords = norm(F.q.trim()).split(/\s+/).filter(Boolean);
     return units.filter((u) =>
       (F.legends || !u.legends) &&
       (!F.type || u.type === F.type) &&
       (!F.faction || u.faction === F.faction) &&
-      (!q || norm(u.name).includes(q)));
+      qWords.every((w) => u.hay.includes(w)));
   }
 
   function results() {
@@ -219,8 +234,8 @@
     const cards = shown.map((u) => {
       const n = qtyIn(squad, u.id);
       return '<div class="card"><div class="ico">' + icon(u.type) + "</div>" +
-        '<div class="info"><div class="title">' + esc(u.name) + "</div>" +
-        '<div class="meta">' + esc(typeLabel(u.type)) + " · " + esc(u.faction) + "</div>" +
+        '<div class="info"><div class="title">' + esc(titleOf(u)) + "</div>" +
+        '<div class="meta">' + esc(typeLabel(u.type)) + " · " + esc(u.faction) + esc(subOf(u)) + "</div>" +
         '<div class="meta">' + esc(ptsText(u)) + " · " + tierLabel(u, 0) + (u.pts.length > 1 ? " / " + tierLabel(u, u.pts.length - 1) : "") + "</div></div>" +
         '<div class="stepper">' +
         '<button data-act="rm" data-id="' + u.id + '" aria-label="Retirer"' + (n ? "" : " disabled") + ">−</button>" +
