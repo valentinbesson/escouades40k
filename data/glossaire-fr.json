@@ -71,5 +71,6 @@
   "chevalier": ["knight"],
   "vehicule": ["vehicle"],
   "dreadnought": ["dreadnought"],
-  "transport": ["transport"]
+  "transport": ["transport"],
+  "Vanguard" : "Avant-garde",
 }
