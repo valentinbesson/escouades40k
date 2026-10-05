@@ -40,8 +40,23 @@ l'installation ne sont pas reprises : il vaut mieux installer l'app avant de com
 | `sw.js` | Service worker : stockage en cache pour le hors ligne |
 | `manifest.webmanifest`, `icons/` | Installation sur l'écran d'accueil |
 | `data/units.json` | Unités, types, tailles et points (généré) |
+| `data/noms-fr.json` | Noms français officiels (modifiable à la main, jamais écrasé) |
+| `data/glossaire-fr.json` | Mots français courants compris par la recherche (modifiable) |
 | `scripts/build_units.py` | Convertit les fichiers BSData en `units.json` |
 | `.github/workflows/update-data.yml` | Mise à jour hebdomadaire automatique |
+
+## Noms français
+
+La recherche comprend les noms anglais et français. Pour ajouter un nom, ajoute une ligne dans
+`data/noms-fr.json` : `"Nom anglais": "Nom français",`. Si le même nom anglais existe dans plusieurs
+collections avec des traductions différentes, préfixe-le : `"Astra Militarum::Nom anglais": "Nom français",`.
+Les unités Legends n'ont pas de nom français.
+
+## Partager l'app
+
+Envoie simplement l'adresse du site (`https://TON-PSEUDO.github.io/escouades40k/`) : chaque personne
+l'ouvre dans Safari et l'ajoute à son écran d'accueil. Les escouades restent sur le téléphone de chacun,
+il n'y a pas de compte ni de partage de données.
 
 ## Limites
 

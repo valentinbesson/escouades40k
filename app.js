@@ -66,13 +66,39 @@
       const res = await fetch("data/noms-fr.json");
       const fr = res.ok ? await res.json() : {};
       units.forEach((u) => {
-        const v = fr[u.name];
+        const v = fr[u.faction + "::" + u.name] || fr[u.name];
         u.fr = v ? v.split("|").map((x) => x.trim()).filter(Boolean) : [];
         u.hay = norm([u.name].concat(u.fr).join(" "));
       });
     } catch (e) {
       units.forEach((u) => { u.fr = []; u.hay = norm(u.name); });
     }
+    // Glossaire français → anglais pour la recherche (facultatif) : data/glossaire-fr.json
+    try {
+      const res = await fetch("data/glossaire-fr.json");
+      const g = res.ok ? await res.json() : {};
+      gloss = Object.keys(g).filter((k) => k[0] !== "_")
+        .map((k) => ({ key: norm(k), alts: g[k].map(norm) }))
+        .sort((a, b) => b.key.length - a.key.length);
+    } catch (e) { gloss = []; }
+  }
+  let gloss = [];
+  const stem = (w) => w.replace(/(s|x)$/, "");
+  // Transforme la saisie en groupes : chaque groupe est une liste de variantes (l'une d'elles doit être trouvée)
+  function queryGroups(raw) {
+    let q = " " + norm(raw.trim()) + " ";
+    const groups = [];
+    for (const g of gloss) {
+      if (!g.key.includes(" ")) continue;
+      const re = new RegExp(" " + g.key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "s? ");
+      if (re.test(q)) { groups.push([g.key].concat(g.alts)); q = q.replace(re, " "); }
+    }
+    q.split(/\s+/).filter(Boolean).forEach((w) => {
+      const base = stem(w);
+      const hit = gloss.find((g) => !g.key.includes(" ") && (g.key === w || g.key === base));
+      groups.push([w].concat(hit ? hit.alts : []));
+    });
+    return groups;
   }
   // Titre affiché : nom français s'il existe, sinon nom anglais
   const titleOf = (u) => (u.fr && u.fr[0]) || u.name;
@@ -148,7 +174,8 @@
         '<p class="empty">Aucune escouade pour l’instant. Crée la première avec « Nouvelle escouade ».</p>') +
       '<p class="muted foot">' +
       (loadError ? "Données indisponibles. Connecte-toi une première fois pour les télécharger." :
-        esc(meta.game || "") + " · " + (meta.count || 0) + " unités · données du " + esc(meta.generated || "?")) + "</p>";
+        esc(meta.game || "") + " · " + (meta.count || 0) + " unités · données du " + esc(meta.generated || "?")) +
+      "<br>Projet de fan non officiel, sans lien avec Games Workshop. Données : BSData.</p>";
   }
 
   /* ---------- Vue : escouade ---------- */
@@ -220,12 +247,12 @@
   }
 
   function filtered() {
-    const qWords = norm(F.q.trim()).split(/\s+/).filter(Boolean);
+    const groups = queryGroups(F.q);
     return units.filter((u) =>
       (F.legends || !u.legends) &&
       (!F.type || u.type === F.type) &&
       (!F.faction || u.faction === F.faction) &&
-      qWords.every((w) => u.hay.includes(w)));
+      groups.every((g) => g.some((w) => u.hay.includes(w))));
   }
 
   function results() {
