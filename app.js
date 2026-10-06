@@ -231,6 +231,9 @@
       "<h2>Figurines</h2>" +
       (items ? '<div class="cards">' + items + "</div>" :
         '<p class="empty">Cette escouade est vide. Ajoute des figurines pour calculer les points.</p>') +
+      '<div class="io"><button class="btn ghost" data-act="export">Exporter</button>' +
+      '<button class="btn ghost" data-act="import">Importer</button></div>' +
+      '<input type="file" id="import-file" accept=".json,application/json" hidden>' +
       '<div class="foot"><button class="btn danger" data-act="delete">Supprimer l’escouade</button></div>';
     document.getElementById("squad-name").addEventListener("input", (e) => {
       s.name = e.target.value.trim() || "Escouade sans nom";
@@ -319,6 +322,75 @@
     return s;
   }
 
+
+  /* ---------- Export / import d'une escouade ---------- */
+  const fileBase = (name) => (String(name).replace(/[\\/:*?"<>|\u0000-\u001f]/g, "-").replace(/\s+/g, " ").trim().slice(0, 80)) || "escouade";
+
+  function squadToFile(s) {
+    return {
+      app: "escouades40k", version: 1, game: meta.game || "", exportedAt: new Date().toISOString(),
+      squad: {
+        name: s.name, points: squadPts(s),
+        items: s.items.map((it) => {
+          const u = byId.get(it.unitId);
+          return { unitId: it.unitId, name: u ? u.name : "", faction: u ? u.faction : "", qty: it.qty, tier: it.tier };
+        }),
+      },
+    };
+  }
+
+  function exportSquad(s) {
+    const name = fileBase(s.name) + ".json";
+    const text = JSON.stringify(squadToFile(s), null, 2);
+    const file = new File([text], name, { type: "application/json" });
+    const touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    const download = () => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(file); a.download = name;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    };
+    // Sur téléphone : feuille de partage (Enregistrer dans Fichiers, Messages, AirDrop…) ; sinon téléchargement direct
+    if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: s.name }).catch((e) => { if (e && e.name !== "AbortError") download(); });
+    } else download();
+  }
+
+  // Lit un fichier d'escouade ; retourne { name, items, skipped } ou null si le fichier n'est pas reconnu
+  function parseSquadFile(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (e) { return null; }
+    const sq = data && (data.squad || data);
+    if (!sq || !Array.isArray(sq.items)) return null;
+    const items = [], skipped = [];
+    sq.items.forEach((r) => {
+      if (!r || typeof r !== "object") return;
+      let u = byId.get(r.unitId);
+      if (!u && r.name) u = units.find((x) => x.name === r.name && (!r.faction || x.faction === r.faction));
+      if (!u) { skipped.push(r.name || "unité inconnue"); return; }
+      const qty = Math.min(99, Math.max(1, parseInt(r.qty, 10) || 1));
+      const tier = Math.min(u.pts.length - 1, Math.max(0, parseInt(r.tier, 10) || 0));
+      items.push({ uid: uid(), unitId: u.id, qty, tier });
+    });
+    const name = typeof sq.name === "string" && sq.name.trim() ? sq.name.trim().slice(0, 40) : "";
+    return { name, items, skipped, total: sq.items.length };
+  }
+
+  async function importSquad(s, file) {
+    let text;
+    try { text = await file.text(); } catch (e) { alert("Impossible de lire ce fichier."); return; }
+    const r = parseSquadFile(text);
+    if (!r) { alert("Ce fichier n’est pas une escouade valide."); return; }
+    if (r.total > 0 && !r.items.length) { alert("Aucune des unités de ce fichier n’a été reconnue."); return; }
+    const n = (k) => k + " unité" + (k > 1 ? "s" : "");
+    let msg = "Remplacer « " + s.name + " » (" + n(squadCount(s)) + ") par « " + (r.name || s.name) + " » (" + n(r.items.reduce((a, i) => a + i.qty, 0)) + ") ?\nLe contenu actuel sera effacé.";
+    if (r.skipped.length) msg += "\n\nNon reconnues, ignorées : " + r.skipped.join(", ") + ".";
+    if (!confirm(msg)) return;
+    if (r.name) s.name = r.name;
+    s.items = r.items;
+    save(); viewSquad(s); toast("Escouade importée");
+  }
+
   /* ---------- Actions (délégation d'événements) ---------- */
   document.addEventListener("click", (e) => {
     const el = e.target.closest("[data-act]");
@@ -335,6 +407,8 @@
     else if (act === "back") location.hash = r.params.get("squad") ? "#/squad/" + r.params.get("squad") : "#/";
     else if (act === "add-units") location.hash = "#/search?squad=" + cur.id;
     else if (act === "more") { F.limit += 40; results(); }
+    else if (act === "export" && cur) exportSquad(cur);
+    else if (act === "import" && cur) { const inp = document.getElementById("import-file"); if (inp) inp.click(); }
     else if (act === "ad") {
       const s = ensureTarget(); addUnit(s, el.dataset.id); results();
       toast("Ajouté à " + s.name);
@@ -356,6 +430,12 @@
     }
   });
   document.addEventListener("change", (e) => {
+    if (e.target.id === "import-file") {
+      const file = e.target.files && e.target.files[0], cur = getSquad(route().parts[1]);
+      e.target.value = "";            // permet de réimporter le même fichier
+      if (file && cur) importSquad(cur, file);
+      return;
+    }
     if (e.target.id === "opt-stats") {
       db.stats = e.target.checked; save();
       const r = route();

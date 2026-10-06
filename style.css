@@ -188,3 +188,8 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
   .switch .track, .switch .track::after { transition: none; }
 }
 .item select.field { padding: 10px 8px; font-size: .9rem; max-width: 62%; }
+
+/* ---------- Export / import ---------- */
+.io { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 28px; }
+.io-note { margin-top: 8px; text-align: center; }
+.io + .io-note + .foot, .io-note + .foot { margin-top: 18px; }
