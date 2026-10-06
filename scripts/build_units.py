@@ -149,14 +149,21 @@ def type_of(entry):
     return "other", battleline
 
 
-def unit_stats(entry):
-    """Premier profil « Unit » trouvé dans l'entrée ou ses modèles enfants."""
+def unit_stats(entry, pmap):
+    """Premier profil « Unit » trouvé dans l'entrée ou ses modèles enfants (en suivant les liens vers les profils partagés)."""
+    def from_profile(p):
+        return {c.get("name"): (c.get("$text") or "").strip() for c in p.get("characteristics", [])}
     stack = [entry]
     while stack:
         e = stack.pop(0)
         for p in e.get("profiles", []):
             if p.get("typeName") == "Unit":
-                return {c.get("name"): (c.get("$text") or "").strip() for c in p.get("characteristics", [])}
+                return from_profile(p)
+        for l in e.get("infoLinks", []):
+            if l.get("type") == "profile":
+                p = pmap.get(l.get("targetId"))
+                if p and p.get("typeName") == "Unit":
+                    return from_profile(p)
         stack.extend(e.get("selectionEntries", []))
         stack.extend(e.get("selectionEntryGroups", []))
     return {}
@@ -166,11 +173,18 @@ def main():
     src = sys.argv[1]
     out = sys.argv[2] if len(sys.argv) > 2 else "data/units.json"
     units, seen = [], set()
+    catalogues, pmap = [], {}
     for path in sorted(glob.glob(os.path.join(src, "*.json"))):
         with open(path, encoding="utf-8") as f:
-            cat = json.load(f).get("catalogue")
+            data = json.load(f)
+        cat = data.get("catalogue") or data.get("gameSystem")
         if not cat:
             continue
+        for p in cat.get("sharedProfiles", []):
+            pmap[p.get("id")] = p
+        if data.get("catalogue"):
+            catalogues.append(cat)
+    for cat in catalogues:
         cat_name = cat.get("name", "")
         entries = list(cat.get("sharedSelectionEntries", [])) + list(cat.get("selectionEntries", []))
         for e in entries:
@@ -214,7 +228,7 @@ def main():
             units.append({
                 "id": e.get("id"), "name": name, "faction": faction, "type": utype,
                 "battleline": battleline, "legends": legends, "min": mn, "max": mx,
-                "pts": ladder, "stats": unit_stats(e),
+                "pts": ladder, "stats": unit_stats(e, pmap),
             })
     if len(units) < 500:
         # Garde-fou : ne jamais écraser les données avec un résultat vide ou anormal

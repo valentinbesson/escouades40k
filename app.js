@@ -117,6 +117,21 @@
     const to = next ? next.from - 1 : u.max;
     return t.from === to ? t.from + " fig." : t.from + "–" + to + " fig.";
   }
+  // Caractéristiques minimales (profil du premier type de figurine de l'unité)
+  const STAT_DEFS = [
+    ["M", "M", "Mouvement"], ["T", "E", "Endurance"], ["Sv", "Sv", "Sauvegarde"],
+    ["W", "PV", "Points de vie"], ["LD", "Cd", "Commandement"], ["OC", "CO", "Contrôle d’objectif"],
+    ["InSv", "Inv", "Sauvegarde invulnérable"],
+  ];
+  function statsHtml(u) {
+    if (!db.stats || !u.stats || !u.stats.M) return "";
+    const chips = STAT_DEFS.filter((d) => u.stats[d[0]]).map((d) =>
+      '<span title="' + d[2] + '"><b>' + esc(u.stats[d[0]]) + "</b><i>" + d[1] + '<span class="sr"> ' + d[2] + "</span></i></span>").join("");
+    return '<div class="stats" role="group" aria-label="Caractéristiques">' + chips + "</div>";
+  }
+  const statsToggle = () =>
+    '<label class="switch"><input type="checkbox" id="opt-stats"' + (db.stats ? " checked" : "") + '>' +
+    '<span class="track" aria-hidden="true"></span>Afficher les caractéristiques</label>';
   function ptsText(u) { return u.pts.map((t) => t.pts + " pts").join(" / "); }
   function itemPts(it) {
     const u = byId.get(it.unitId);
@@ -195,10 +210,13 @@
         ? '<select class="field" data-act="tier" data-uid="' + it.uid + '" aria-label="Taille de l’unité">' +
           u.pts.map((t, i) => '<option value="' + i + '"' + (i === it.tier ? " selected" : "") + ">" + tierLabel(u, i) + " · " + t.pts + " pts</option>").join("") + "</select>"
         : '<span class="muted">' + tierLabel(u, 0) + " · " + u.pts[0].pts + " pts</span>";
-      return '<div class="card item"><div class="ico">' + icon(u.type) + "</div>" +
+      return '<div class="card item" data-uid="' + it.uid + '">' + '<button class="grip" data-act="grip" data-uid="' + it.uid + '" aria-label="Déplacer l’unité (glisser, ou flèches haut et bas au clavier)" title="Glisser pour réordonner">' +
+        '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.8"/><circle cx="15" cy="6" r="1.8"/><circle cx="9" cy="12" r="1.8"/><circle cx="15" cy="12" r="1.8"/><circle cx="9" cy="18" r="1.8"/><circle cx="15" cy="18" r="1.8"/></svg></button>' +
+        '<div class="ico">' + icon(u.type) + "</div>" +
         '<div class="info"><div class="title">' + esc(titleOf(u)) + "</div>" +
         '<div class="meta">' + esc(typeLabel(u.type)) + " · " + esc(u.faction) + esc(subOf(u)) + "</div>" +
         '<div class="line-pts">' + itemPts(it) + " pts</div></div>" +
+        statsHtml(u) +
         '<div class="controls">' + tierSel +
         '<div class="stepper"><button data-act="dec" data-uid="' + it.uid + '" aria-label="Moins"' + (it.qty <= 1 ? " disabled" : "") + ">−</button>" +
         '<span class="qty">' + it.qty + '</span><button data-act="inc" data-uid="' + it.uid + '" aria-label="Plus">+</button>' +
@@ -209,6 +227,7 @@
       '<input class="name-input" id="squad-name" value="' + esc(s.name) + '" maxlength="40" aria-label="Nom de l’escouade"></div>' +
       '<div class="total"><span class="muted">Total</span><span class="pts pts-big" id="total">' + squadPts(s) + ' <small>pts</small></span></div>' +
       '<button class="btn" data-act="add-units">Ajouter des figurines</button>' +
+      '<div style="margin-top:8px">' + statsToggle() + "</div>" +
       "<h2>Figurines</h2>" +
       (items ? '<div class="cards">' + items + "</div>" :
         '<p class="empty">Cette escouade est vide. Ajoute des figurines pour calculer les points.</p>') +
@@ -240,7 +259,8 @@
       types.map((t) => '<option value="' + t + '"' + (F.type === t ? " selected" : "") + ">" + esc(typeLabel(t)) + "</option>").join("") + "</select>" +
       '<select class="field" id="f-faction" aria-label="Collection"><option value="">Toutes les collections</option>' +
       factions.map((f) => '<option value="' + esc(f) + '"' + (F.faction === f ? " selected" : "") + ">" + esc(f) + "</option>").join("") + "</select></div>" +
-      '<label class="check"><input type="checkbox" id="f-legends"' + (F.legends ? " checked" : "") + "> Inclure les unités Legends</label></div>" +
+      '</div><div class="opts"><label class="check"><input type="checkbox" id="f-legends"' + (F.legends ? " checked" : "") + "> Inclure les unités Legends</label>" +
+      statsToggle() + "</div>" +
       '<div id="results"></div>');
     if (!loadError) {
       const bind = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
@@ -275,7 +295,8 @@
         '<div class="stepper">' +
         '<button data-act="rm" data-id="' + u.id + '" aria-label="Retirer"' + (n ? "" : " disabled") + ">−</button>" +
         (n ? '<span class="qty">' + n + "</span>" : "") +
-        '<button class="add" data-act="ad" data-id="' + u.id + '" aria-label="Ajouter">+</button></div></div>';
+        '<button class="add" data-act="ad" data-id="' + u.id + '" aria-label="Ajouter">+</button></div>' +
+        statsHtml(u) + "</div>";
     }).join("");
     document.getElementById("results").innerHTML =
       '<p class="muted" style="margin-bottom:10px">' + list.length + " résultat" + (list.length > 1 ? "s" : "") + "</p>" +
@@ -335,11 +356,92 @@
     }
   });
   document.addEventListener("change", (e) => {
+    if (e.target.id === "opt-stats") {
+      db.stats = e.target.checked; save();
+      const r = route();
+      if (r.parts[0] === "search") results();
+      else if (r.parts[0] === "squad" && getSquad(r.parts[1])) {
+        const y = window.scrollY; viewSquad(getSquad(r.parts[1])); window.scrollTo(0, y);
+      }
+      return;
+    }
     const el = e.target.closest('[data-act="tier"]');
     if (!el) return;
     const r = route(), cur = getSquad(r.parts[1]);
     const it = cur && cur.items.find((i) => i.uid === el.dataset.uid);
     if (it) { it.tier = +el.value; save(); viewSquad(cur); }
+  });
+
+
+  /* ---------- Réorganisation des unités : glisser-déposer ---------- */
+  let drag = null;
+  function dragStep() {
+    const card = drag.card;
+    const place = () => { card.style.transform = "translateY(" + (drag.y + window.scrollY - drag.startY) + "px)"; };
+    place();
+    for (let guard = 0; guard < 20; guard++) {
+      const r = card.getBoundingClientRect(), mid = r.top + r.height / 2;
+      const prev = card.previousElementSibling, next = card.nextElementSibling;
+      let swap = null;
+      if (next) { const n = next.getBoundingClientRect(); if (mid > n.top + n.height / 2) swap = () => card.parentNode.insertBefore(next, card); }
+      if (!swap && prev) { const q = prev.getBoundingClientRect(); if (mid < q.top + q.height / 2) swap = () => card.parentNode.insertBefore(card, prev); }
+      if (!swap) break;
+      const before = r.top;
+      swap();
+      drag.startY += card.getBoundingClientRect().top - before; // la carte reste sous le doigt
+      place();
+    }
+  }
+  document.addEventListener("pointerdown", (e) => {
+    const h = e.target.closest('[data-act="grip"]');
+    if (!h || drag || (e.pointerType === "mouse" && e.button !== 0)) return;
+    e.preventDefault();
+    h.setPointerCapture(e.pointerId);
+    const card = h.closest(".item");
+    drag = { card, id: e.pointerId, startY: e.clientY + window.scrollY, y: e.clientY, raf: 0 };
+    card.classList.add("dragging");
+    document.body.classList.add("is-dragging");
+    const tick = () => {
+      if (!drag) return;
+      const edge = 70, vh = window.innerHeight;       // défilement automatique près des bords
+      if (drag.y < edge) window.scrollBy(0, -Math.ceil((edge - drag.y) / 4));
+      else if (drag.y > vh - edge) window.scrollBy(0, Math.ceil((drag.y - (vh - edge)) / 4));
+      dragStep();
+      drag.raf = requestAnimationFrame(tick);
+    };
+    drag.raf = requestAnimationFrame(tick);
+  });
+  document.addEventListener("pointermove", (e) => { if (drag && e.pointerId === drag.id) drag.y = e.clientY; });
+  function endDrag(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    cancelAnimationFrame(drag.raf);
+    const card = drag.card, list = card.parentNode;
+    card.classList.remove("dragging");
+    card.style.transform = "";
+    document.body.classList.remove("is-dragging");
+    drag = null;
+    const s = getSquad(route().parts[1]);
+    if (!s) return;
+    const order = [...list.querySelectorAll(".item")].map((c) => c.dataset.uid);
+    const sorted = order.map((id) => s.items.find((i) => i.uid === id)).filter(Boolean);
+    if (sorted.length === s.items.length) { s.items = sorted; save(); }
+  }
+  document.addEventListener("pointerup", endDrag);
+  document.addEventListener("pointercancel", endDrag);
+  document.addEventListener("contextmenu", (e) => { if (e.target.closest('[data-act="grip"]')) e.preventDefault(); });
+  // Alternative au clavier : flèches haut / bas sur la poignée
+  document.addEventListener("keydown", (e) => {
+    const h = e.target.closest && e.target.closest('[data-act="grip"]');
+    if (!h || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+    e.preventDefault();
+    const s = getSquad(route().parts[1]);
+    if (!s) return;
+    const i = s.items.findIndex((x) => x.uid === h.dataset.uid), j = i + (e.key === "ArrowUp" ? -1 : 1);
+    if (i < 0 || !s.items[j]) return;
+    [s.items[i], s.items[j]] = [s.items[j], s.items[i]];
+    save(); viewSquad(s);
+    const nh = document.querySelector('[data-act="grip"][data-uid="' + h.dataset.uid + '"]');
+    if (nh) nh.focus();
   });
 
   window.addEventListener("hashchange", render);
