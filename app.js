@@ -26,6 +26,8 @@
   const $app = document.getElementById("app");
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const norm = (s) => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  // Comme norm, mais tirets et apostrophes comptent comme des espaces (« avant-garde » = « avant garde »)
+  const normS = (s) => norm(s).replace(/[-\u2010-\u2015\u2019']/g, " ").replace(/\s+/g, " ").trim();
   const uid = () => Math.random().toString(36).slice(2, 9);
   let toastTimer;
   function toast(msg) {
@@ -61,32 +63,37 @@
       byId = new Map(units.map((u) => [u.id, u]));
       loadError = false;
     } catch (e) { loadError = true; return; }
-    // Noms français (facultatif) : data/noms-fr.json
-    try {
-      const res = await fetch("data/noms-fr.json");
-      const fr = res.ok ? await res.json() : {};
-      units.forEach((u) => {
-        const v = fr[u.faction + "::" + u.name] || fr[u.name];
-        u.fr = v ? v.split("|").map((x) => x.trim()).filter(Boolean) : [];
-        u.hay = norm([u.name].concat(u.fr).join(" "));
-      });
-    } catch (e) {
-      units.forEach((u) => { u.fr = []; u.hay = norm(u.name); });
+    // Fichiers facultatifs modifiables à la main. Absent = on ignore ; illisible = on prévient.
+    async function optionalJson(path) {
+      let res;
+      try { res = await fetch(path); } catch (e) { return {}; }
+      if (!res.ok) return {};
+      try { return await res.json(); }
+      catch (e) { dataWarn.push(path.split("/").pop()); return {}; }
     }
-    // Glossaire français → anglais pour la recherche (facultatif) : data/glossaire-fr.json
-    try {
-      const res = await fetch("data/glossaire-fr.json");
-      const g = res.ok ? await res.json() : {};
-      gloss = Object.keys(g).filter((k) => k[0] !== "_")
-        .map((k) => ({ key: norm(k), alts: g[k].map(norm) }))
-        .sort((a, b) => b.key.length - a.key.length);
-    } catch (e) { gloss = []; }
+    // Noms français : data/noms-fr.json
+    const fr = await optionalJson("data/noms-fr.json");
+    units.forEach((u) => {
+      const v = fr[u.faction + "::" + u.name] || fr[u.name];
+      u.fr = typeof v === "string" ? v.split("|").map((x) => x.trim()).filter(Boolean) : [];
+      u.hay = normS([u.name].concat(u.fr).join(" "));
+    });
+    // Glossaire français → anglais pour la recherche : data/glossaire-fr.json
+    const g = await optionalJson("data/glossaire-fr.json");
+    gloss = Object.keys(g).filter((k) => k[0] !== "_").map((k) => {
+      const alts = [].concat(g[k]).filter((x) => typeof x === "string"); // "vanguard" ou ["vanguard"]
+      return { key: normS(k), alts: alts.map((a) => normS(a)) };
+    }).sort((a, b) => b.key.length - a.key.length);
   }
   let gloss = [];
+  const dataWarn = [];
+  const warnHtml = () => (dataWarn.length
+    ? '<p class="empty" style="margin:10px 0">⚠ Fichier illisible : ' + esc(dataWarn.join(", ")) +
+      " (virgule ou guillemet manquant ?). Il est ignoré pour l’instant.</p>" : "");
   const stem = (w) => w.replace(/(s|x)$/, "");
   // Transforme la saisie en groupes : chaque groupe est une liste de variantes (l'une d'elles doit être trouvée)
   function queryGroups(raw) {
-    let q = " " + norm(raw.trim()) + " ";
+    let q = " " + normS(raw) + " ";
     const groups = [];
     for (const g of gloss) {
       if (!g.key.includes(" ")) continue;
@@ -165,7 +172,7 @@
       '<span class="pts">' + squadPts(s) + " pts</span></button>"
     ).join("");
     $app.innerHTML =
-      '<div class="top"><h1>Escouades</h1></div>' +
+      '<div class="top"><h1>Escouades</h1></div>' + warnHtml() +
       '<div class="hero">' +
       '<button class="btn" data-act="new">Nouvelle escouade</button>' +
       '<button class="btn ghost" data-act="search">Chercher une figurine</button></div>' +
@@ -224,7 +231,7 @@
     const squadOpts = db.squads.map((s) => '<option value="' + s.id + '"' + (s.id === target ? " selected" : "") + ">" + esc(s.name) + "</option>").join("") +
       '<option value="__new"' + (target === "__new" ? " selected" : "") + ">+ Nouvelle escouade</option>";
     $app.innerHTML =
-      '<div class="top"><button class="back" data-act="back" aria-label="Retour">‹</button><h1>Figurines</h1></div>' +
+      '<div class="top"><button class="back" data-act="back" aria-label="Retour">‹</button><h1>Figurines</h1></div>' + warnHtml() +
       (loadError ? '<p class="empty">Données indisponibles. Connecte-toi une première fois pour les télécharger.</p>' :
       '<div class="filters">' +
       '<div class="target"><label for="f-target">Ajouter à</label><select class="field" id="f-target">' + squadOpts + "</select></div>" +
