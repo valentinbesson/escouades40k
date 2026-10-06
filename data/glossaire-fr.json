@@ -72,5 +72,5 @@
   "vehicule": ["vehicle"],
   "dreadnought": ["dreadnought"],
   "transport": ["transport"],
-  "Avant-garde" : ["Vanguard"]
+  "avant-garde" : ["vanguard"]
 }
