@@ -1,7 +1,7 @@
 /* Service worker : permet l'utilisation hors ligne.
    Stratégie : réseau d'abord (on voit toujours la dernière version quand il y a du réseau),
    et copie en cache en secours quand il n'y en a pas. */
-const CACHE = "escouades40k-v9";
+const CACHE = "escouades40k-v11";
 const SHELL = [
   "./", "index.html", "style.css", "app.js", "manifest.webmanifest",
   "data/units.json", "data/noms-fr.json", "data/glossaire-fr.json", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",

@@ -3,6 +3,21 @@
 (function () {
   "use strict";
 
+
+  /* ---------- Thème sombre / clair ---------- */
+  const THEME_KEY = "escouades40k.theme";
+  const currentTheme = () => (document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
+  function setTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    try { localStorage.setItem(THEME_KEY, t); } catch (e) { /* stockage indisponible */ }
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute("content", t === "light" ? "#f5f1ec" : "#1b2027");
+  }
+  const themeToggle = () =>
+    '<button class="theme-toggle" data-act="theme" role="switch" aria-checked="' + (currentTheme() === "dark") + '" aria-label="Mode sombre" title="Mode sombre / mode clair">' +
+    '<span class="tt-moon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></span>' +
+    '<span class="tt-sun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg></span></button>';
+
   /* ---------- Types d'unité : libellé + icône ---------- */
   const TYPES = {
     epic: ["Héros épique", '<path d="M4 18 3 8l5 4 4-7 4 7 5-4-1 10z"/>'],
@@ -187,7 +202,7 @@
       '<span class="pts">' + squadPts(s) + " pts</span></button>"
     ).join("");
     $app.innerHTML =
-      '<div class="top"><h1>Escouades</h1></div>' + warnHtml() +
+      '<div class="top"><h1>Escouades</h1>' + themeToggle() + "</div>" + warnHtml() +
       '<div class="hero">' +
       '<button class="btn" data-act="new">Nouvelle escouade</button>' +
       '<button class="btn ghost" data-act="search">Chercher une figurine</button></div>' +
@@ -406,6 +421,10 @@
     else if (act === "home") location.hash = "#/";
     else if (act === "back") location.hash = r.params.get("squad") ? "#/squad/" + r.params.get("squad") : "#/";
     else if (act === "add-units") location.hash = "#/search?squad=" + cur.id;
+    else if (act === "theme") {
+      const next = currentTheme() === "dark" ? "light" : "dark";
+      setTheme(next); el.setAttribute("aria-checked", String(next === "dark"));
+    }
     else if (act === "more") { F.limit += 40; results(); }
     else if (act === "export" && cur) exportSquad(cur);
     else if (act === "import" && cur) { const inp = document.getElementById("import-file"); if (inp) inp.click(); }

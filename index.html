@@ -12,6 +12,19 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Escouades">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>
+    /* Applique le thème choisi (ou celui du téléphone) avant l'affichage, pour éviter un flash */
+    (function () {
+      var t = "dark";
+      try {
+        t = localStorage.getItem("escouades40k.theme");
+        if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      } catch (e) { t = "dark"; }
+      document.documentElement.setAttribute("data-theme", t);
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m) m.setAttribute("content", t === "light" ? "#f5f1ec" : "#1b2027");
+    })();
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
