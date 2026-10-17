@@ -236,3 +236,25 @@ body::before {
 :root:not([data-theme="light"]) .theme-toggle .tt-moon,
 :root[data-theme="light"] .theme-toggle .tt-sun { background: var(--accent); color: var(--on-accent); }
 @media (prefers-reduced-motion: reduce) { .theme-toggle span { transition: none; } }
+
+/* ---------- Accueil : bouton sous la liste ---------- */
+.new-squad { margin-top: 12px; }
+
+/* ---------- Armes ---------- */
+.weapons { grid-column: 1 / -1; margin-top: 2px; }
+.weapons summary {
+  min-height: 40px; display: flex; align-items: center; gap: 4px; padding: 0 10px;
+  background: var(--metal); border: 1px solid var(--plate-2); border-radius: 8px;
+  color: var(--accent-text); font-weight: 600; font-size: .9rem; cursor: pointer; list-style: none;
+}
+.weapons summary::-webkit-details-marker { display: none; }
+.weapons summary::before { content: "›"; display: inline-block; width: 14px; font-size: 1.1rem; line-height: 1; transition: transform .15s; }
+.weapons[open] summary::before { transform: rotate(90deg); }
+.wtable { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.wtable thead th { color: var(--accent-text); font-weight: 700; text-align: center; padding: 4px 2px; border-bottom: 1px solid var(--plate-2); white-space: nowrap; }
+.wtable thead th:first-child { text-align: left; font-family: var(--display); font-size: .9rem; }
+.wtable td { text-align: center; padding: 6px 2px; white-space: nowrap; border-bottom: 1px solid var(--plate-2); width: 2.6em; }
+.wtable tbody th { text-align: left; font-weight: 600; padding: 6px 6px 6px 0; border-bottom: 1px solid var(--plate-2); }
+.wtable tr.alt th { padding-left: 12px; font-weight: 500; }
+.wtable .kw { display: block; font-weight: 400; font-size: .72rem; color: var(--muted); margin-top: 1px; }
+@media (prefers-reduced-motion: reduce) { .weapons summary::before { transition: none; } }

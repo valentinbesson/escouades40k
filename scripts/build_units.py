@@ -169,11 +169,52 @@ def unit_stats(entry, pmap):
     return {}
 
 
+WEAPON_TYPES = {"Ranged Weapons": ("R", "BS"), "Melee Weapons": ("M", "WS")}
+# Options sans rapport avec l'équipement de base (croisade, améliorations, reliques…)
+SKIP_OPTIONS = re.compile(r"crusade|battle (trait|scar|honour)|experience|enhancement|relic|weapon modification|"
+                          r"warlord|legendary|advancement|commendation|blackstone|deeds|boon|honours", re.I)
+
+
+def unit_weapons(entry, pmap, emap, gmap):
+    """Profils d'armes (tir puis mêlée) que l'unité peut porter, y compris les options d'équipement."""
+    found, seen, stack = {}, set(), [entry]
+    def keep(p):
+        if p and p.get("typeName") in WEAPON_TYPES:
+            found.setdefault(p.get("name", "").strip(), p)
+    while stack:
+        e = stack.pop(0)
+        for p in e.get("profiles", []):
+            keep(p)
+        for l in e.get("infoLinks", []):
+            if l.get("type") == "profile":
+                keep(pmap.get(l.get("targetId")))
+        kids = list(e.get("selectionEntries", [])) + list(e.get("selectionEntryGroups", []))
+        for l in e.get("entryLinks", []):
+            if SKIP_OPTIONS.search(l.get("name", "")):
+                continue
+            t = (emap if l.get("type") == "selectionEntry" else gmap).get(l.get("targetId"))
+            if t and t.get("id") not in seen:
+                seen.add(t.get("id"))
+                kids.append(t)
+            kids.append({"profiles": l.get("profiles", []), "infoLinks": l.get("infoLinks", [])})
+        stack.extend(k for k in kids if k.get("type") != "unit" and not SKIP_OPTIONS.search(k.get("name", "")))
+    rows = []
+    for name, p in found.items():
+        kind, skill = WEAPON_TYPES[p["typeName"]]
+        ch = {c.get("name"): (c.get("$text") or "").strip() for c in p.get("characteristics", [])}
+        kw = ch.get("Keywords", "")
+        rows.append([name, kind, ch.get("Range", ""), ch.get("A", ""), ch.get(skill, ""),
+                     ch.get("S", ""), ch.get("AP", ""), ch.get("D", ""), "" if kw == "-" else kw])
+    rows.sort(key=lambda r: r[1] != "R")  # tir d'abord, ordre BSData conservé sinon
+    return rows
+
+
 def main():
     src = sys.argv[1]
     out = sys.argv[2] if len(sys.argv) > 2 else "data/units.json"
     units, seen = [], set()
-    catalogues, pmap = [], {}
+    catalogues, pmap, emap, gmap = [], {}, {}, {}
+    weapons, weapon_idx = [], {}
     for path in sorted(glob.glob(os.path.join(src, "*.json"))):
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
@@ -182,6 +223,10 @@ def main():
             continue
         for p in cat.get("sharedProfiles", []):
             pmap[p.get("id")] = p
+        for e in cat.get("sharedSelectionEntries", []):
+            emap[e.get("id")] = e
+        for g in cat.get("sharedSelectionEntryGroups", []):
+            gmap[g.get("id")] = g
         if data.get("catalogue"):
             catalogues.append(cat)
     for cat in catalogues:
@@ -225,10 +270,18 @@ def main():
                 ladder = [{"from": mn, "pts": base}] + [{"from": t, "pts": p} for t, p in tiers if t > mn]
             if mx < ladder[-1]["from"]:
                 mx = ladder[-1]["from"]
+            # Armes : table commune (une arme partagée par plusieurs unités n'est écrite qu'une fois)
+            w = []
+            for row in unit_weapons(e, pmap, emap, gmap):
+                k = tuple(row)
+                if k not in weapon_idx:
+                    weapon_idx[k] = len(weapons)
+                    weapons.append(row)
+                w.append(weapon_idx[k])
             units.append({
                 "id": e.get("id"), "name": name, "faction": faction, "type": utype,
                 "battleline": battleline, "legends": legends, "min": mn, "max": mx,
-                "pts": ladder, "stats": unit_stats(e, pmap),
+                "pts": ladder, "stats": unit_stats(e, pmap), "w": w,
             })
     if len(units) < 500:
         # Garde-fou : ne jamais écraser les données avec un résultat vide ou anormal
@@ -236,8 +289,9 @@ def main():
     units.sort(key=lambda u: (u["faction"], u["name"]))
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
+        # weapons : [nom, "R" tir / "M" mêlée, portée, A, CT ou CC, F, PA, D, mots-clés]
         json.dump({"game": GAME, "count": len(units),
-                   "generated": datetime.date.today().isoformat(), "units": units},
+                   "generated": datetime.date.today().isoformat(), "units": units, "weapons": weapons},
                   f, ensure_ascii=False, separators=(",", ":"))
     print("%d unités écrites dans %s" % (len(units), out))
 

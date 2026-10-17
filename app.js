@@ -67,14 +67,15 @@
   const getSquad = (id) => db.squads.find((s) => s.id === id);
 
   /* ---------- Données ---------- */
-  let units = [], byId = new Map(), meta = {}, loadError = false;
+  let units = [], weapons = [], byId = new Map(), meta = {}, loadError = false;
   async function loadUnits() {
     try {
       const res = await fetch("data/units.json");
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       units = data.units;
-      meta = { count: data.count, generated: data.generated, game: data.game };
+      weapons = data.weapons || [];
+      meta ={ count: data.count, generated: data.generated, game: data.game };
       byId = new Map(units.map((u) => [u.id, u]));
       loadError = false;
     } catch (e) { loadError = true; return; }
@@ -142,8 +143,36 @@
     if (!db.stats || !u.stats || !u.stats.M) return "";
     const chips = STAT_DEFS.filter((d) => u.stats[d[0]]).map((d) =>
       '<span title="' + d[2] + '"><b>' + esc(u.stats[d[0]]) + "</b><i>" + d[1] + '<span class="sr"> ' + d[2] + "</span></i></span>").join("");
-    return '<div class="stats" role="group" aria-label="Caractéristiques">' + chips + "</div>";
+    return '<div class="stats" role="group" aria-label="Caractéristiques">' + chips + "</div>" + weaponsHtml(u);
   }
+  // Armes : weapons[i] = [nom, "R" tir / "M" mêlée, portée, A, CT ou CC, F, PA, D, mots-clés]
+  const openWeapons = new Set();   // panneaux « Armes » ouverts, conservés quand la liste se redessine
+  function weaponsHtml(u) {
+    const list = (u.w || []).map((i) => weapons[i]).filter(Boolean);
+    if (!list.length) return "";
+    const table = (kind, head, cols) => {
+      const rows = list.filter((w) => w[1] === kind);
+      if (!rows.length) return "";
+      return '<table class="wtable"><thead><tr><th scope="col">' + head + "</th>" +
+        cols.map((c) => '<th scope="col" title="' + c[2] + '">' + c[1] + "</th>").join("") + "</tr></thead><tbody>" +
+        rows.map((w) => {
+          const alt = w[0].startsWith("➤");     // profil alternatif d'une même arme (ex. plasma standard / surcharge)
+          return "<tr" + (alt ? ' class="alt"' : "") + '><th scope="row">' + esc(w[0].replace(/^➤\s*/, "")) +
+            (w[8] ? '<span class="kw">' + esc(w[8]) + "</span>" : "") + "</th>" +
+            cols.map((c) => "<td>" + esc(w[c[0]] || "–") + "</td>").join("") + "</tr>";
+        }).join("") + "</tbody></table>";
+    };
+    return '<details class="weapons" data-w="' + u.id + '"' + (openWeapons.has(u.id) ? " open" : "") + ">" +
+      "<summary>Armes <span class=\"muted\">· " + list.length + "</span></summary>" +
+      table("R", "Tir", [[2, "Port.", "Portée"], [3, "A", "Attaques"], [4, "CT", "Capacité de tir"], [5, "F", "Force"], [6, "PA", "Pénétration d’armure"], [7, "D", "Dégâts"]]) +
+      table("M", "Mêlée", [[3, "A", "Attaques"], [4, "CC", "Capacité de combat"], [5, "F", "Force"], [6, "PA", "Pénétration d’armure"], [7, "D", "Dégâts"]]) +
+      "</details>";
+  }
+  document.addEventListener("toggle", (e) => {
+    const d = e.target;
+    if (!d.matches || !d.matches("details.weapons")) return;
+    if (d.open) openWeapons.add(d.dataset.w); else openWeapons.delete(d.dataset.w);
+  }, true);
   const statsToggle = () =>
     '<label class="switch"><input type="checkbox" id="opt-stats"' + (db.stats ? " checked" : "") + '>' +
     '<span class="track" aria-hidden="true"></span>Afficher les caractéristiques</label>';
@@ -204,11 +233,11 @@
     $app.innerHTML =
       '<div class="top"><h1>Escouades</h1>' + themeToggle() + "</div>" + warnHtml() +
       '<div class="hero">' +
-      '<button class="btn" data-act="new">Nouvelle escouade</button>' +
       '<button class="btn ghost" data-act="search">Chercher une figurine</button></div>' +
       "<h2>Escouades enregistrées</h2>" +
       (rows ? '<div class="stack">' + rows + "</div>" :
         '<p class="empty">Aucune escouade pour l’instant. Crée la première avec « Nouvelle escouade ».</p>') +
+      '<button class="btn new-squad" data-act="new">Nouvelle escouade</button>' +
       '<p class="muted foot">' +
       (loadError ? "Données indisponibles. Connecte-toi une première fois pour les télécharger." :
         esc(meta.game || "") + " · " + (meta.count || 0) + " unités · données du " + esc(meta.generated || "?")) +

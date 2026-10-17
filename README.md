@@ -26,11 +26,14 @@ l'installation ne sont pas reprises : il vaut mieux installer l'app avant de com
 
 ## Utilisation
 
-- **Accueil** : liste des escouades, « Nouvelle escouade », « Chercher une figurine ».
+- **Accueil** : « Chercher une figurine », liste des escouades, puis « Nouvelle escouade » en dessous.
 - **Recherche** : filtres par nom, type et collection (faction). Les boutons **+ / −** ajoutent ou retirent
   la figurine dans l'escouade choisie en haut de la page.
 - **Escouade** : renommer (toucher le titre), changer la quantité, choisir la taille de l'unité
   (par exemple 10 ou 20 figurines, avec les points correspondants) ou retirer une ligne.
+- **Caractéristiques** : l'interrupteur « Afficher les caractéristiques » montre le profil de l'unité et un
+  panneau **Armes** dépliable (tir et mêlée : portée, A, CT/CC, F, PA, D et mots-clés). Toutes les armes
+  que l'unité peut prendre en option y figurent, pas seulement l'équipement de base.
 
 ## Fichiers
 
@@ -39,7 +42,7 @@ l'installation ne sont pas reprises : il vaut mieux installer l'app avant de com
 | `index.html`, `style.css`, `app.js` | L'application |
 | `sw.js` | Service worker : stockage en cache pour le hors ligne |
 | `manifest.webmanifest`, `icons/` | Installation sur l'écran d'accueil |
-| `data/units.json` | Unités, types, tailles et points (généré) |
+| `data/units.json` | Unités, types, tailles, points, caractéristiques et armes (généré) |
 | `data/noms-fr.json` | Noms français officiels (modifiable à la main, jamais écrasé) |
 | `data/glossaire-fr.json` | Mots français courants compris par la recherche (modifiable) |
 | `scripts/build_units.py` | Convertit les fichiers BSData en `units.json` |
