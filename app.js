@@ -222,13 +222,19 @@
     return viewHome();
   }
 
+  function gripHtml(uid, label) {
+    return '<button class="grip" data-act="grip" data-uid="' + uid + '" aria-label="' + label + ' (glisser, ou flèches haut et bas au clavier)" title="Glisser pour réordonner">' +
+      '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.8"/><circle cx="15" cy="6" r="1.8"/><circle cx="9" cy="12" r="1.8"/><circle cx="15" cy="12" r="1.8"/><circle cx="9" cy="18" r="1.8"/><circle cx="15" cy="18" r="1.8"/></svg></button>';
+  }
+
   /* ---------- Vue : accueil ---------- */
   function viewHome() {
     const rows = db.squads.map((s) =>
-      '<button class="squad-row" data-act="open" data-id="' + s.id + '">' +
+      '<div class="squad-row item" data-uid="' + s.id + '">' + gripHtml(s.id, "Déplacer l’escouade") +
+      '<button class="open" data-act="open" data-id="' + s.id + '">' +
       '<span class="name">' + esc(s.name) +
       '<br><span class="sub">' + squadCount(s) + " unité" + (squadCount(s) > 1 ? "s" : "") + "</span></span>" +
-      '<span class="pts">' + squadPts(s) + " pts</span></button>"
+      '<span class="pts">' + squadPts(s) + " pts</span></button></div>"
     ).join("");
     $app.innerHTML =
       '<div class="top"><h1>Escouades</h1>' + themeToggle() + "</div>" + warnHtml() +
@@ -254,8 +260,7 @@
         ? '<select class="field" data-act="tier" data-uid="' + it.uid + '" aria-label="Taille de l’unité">' +
           u.pts.map((t, i) => '<option value="' + i + '"' + (i === it.tier ? " selected" : "") + ">" + tierLabel(u, i) + " · " + t.pts + " pts</option>").join("") + "</select>"
         : '<span class="muted">' + tierLabel(u, 0) + " · " + u.pts[0].pts + " pts</span>";
-      return '<div class="card item" data-uid="' + it.uid + '">' + '<button class="grip" data-act="grip" data-uid="' + it.uid + '" aria-label="Déplacer l’unité (glisser, ou flèches haut et bas au clavier)" title="Glisser pour réordonner">' +
-        '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.8"/><circle cx="15" cy="6" r="1.8"/><circle cx="9" cy="12" r="1.8"/><circle cx="15" cy="12" r="1.8"/><circle cx="9" cy="18" r="1.8"/><circle cx="15" cy="18" r="1.8"/></svg></button>' +
+      return '<div class="card item" data-uid="' + it.uid + '">' + gripHtml(it.uid, "Déplacer l’unité") +
         '<div class="ico">' + icon(u.type) + "</div>" +
         '<div class="info"><div class="title">' + esc(titleOf(u)) + "</div>" +
         '<div class="meta">' + esc(typeLabel(u.type)) + " · " + esc(u.faction) + esc(subOf(u)) + "</div>" +
@@ -501,7 +506,17 @@
   });
 
 
-  /* ---------- Réorganisation des unités : glisser-déposer ---------- */
+  /* ---------- Réorganisation des unités / escouades : glisser-déposer ---------- */
+  // Liste réordonnable de la vue courante : unités d'une escouade, ou escouades de l'accueil
+  function sortable() {
+    const r = route();
+    if (r.parts[0] === "squad") {
+      const s = getSquad(r.parts[1]);
+      return s && { get: () => s.items, set: (a) => { s.items = a; }, key: (x) => x.uid, redraw: () => viewSquad(s) };
+    }
+    if (!r.parts[0]) return { get: () => db.squads, set: (a) => { db.squads = a; }, key: (x) => x.id, redraw: viewHome };
+    return null;
+  }
   let drag = null;
   function dragStep() {
     const card = drag.card;
@@ -548,11 +563,12 @@
     card.style.transform = "";
     document.body.classList.remove("is-dragging");
     drag = null;
-    const s = getSquad(route().parts[1]);
-    if (!s) return;
+    const L = sortable();
+    if (!L) return;
+    const arr = L.get();
     const order = [...list.querySelectorAll(".item")].map((c) => c.dataset.uid);
-    const sorted = order.map((id) => s.items.find((i) => i.uid === id)).filter(Boolean);
-    if (sorted.length === s.items.length) { s.items = sorted; save(); }
+    const sorted = order.map((id) => arr.find((x) => L.key(x) === id)).filter(Boolean);
+    if (sorted.length === arr.length) { L.set(sorted); save(); }
   }
   document.addEventListener("pointerup", endDrag);
   document.addEventListener("pointercancel", endDrag);
@@ -562,12 +578,13 @@
     const h = e.target.closest && e.target.closest('[data-act="grip"]');
     if (!h || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
     e.preventDefault();
-    const s = getSquad(route().parts[1]);
-    if (!s) return;
-    const i = s.items.findIndex((x) => x.uid === h.dataset.uid), j = i + (e.key === "ArrowUp" ? -1 : 1);
-    if (i < 0 || !s.items[j]) return;
-    [s.items[i], s.items[j]] = [s.items[j], s.items[i]];
-    save(); viewSquad(s);
+    const L = sortable();
+    if (!L) return;
+    const a = L.get();
+    const i = a.findIndex((x) => L.key(x) === h.dataset.uid), j = i + (e.key === "ArrowUp" ? -1 : 1);
+    if (i < 0 || !a[j]) return;
+    [a[i], a[j]] = [a[j], a[i]];
+    save(); L.redraw();
     const nh = document.querySelector('[data-act="grip"][data-uid="' + h.dataset.uid + '"]');
     if (nh) nh.focus();
   });

@@ -82,10 +82,14 @@ button { cursor: pointer; border: 0; }
 .empty { padding: 22px 16px; border: 1px dashed var(--plate-2); border-radius: var(--radius); color: var(--muted); text-align: center; }
 
 .squad-row {
-  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
-  background: var(--plate); border-radius: var(--radius); padding: 14px;
+  display: flex; background: var(--plate); border-radius: var(--radius);
   border-left: 4px solid var(--accent);
 }
+.squad-row .open {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-align: left;
+  background: transparent; padding: 14px 14px 14px 8px; border-radius: 0 var(--radius) var(--radius) 0;
+}
+.squad-row .grip { border-radius: 0; }
 .squad-row .name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .squad-row .sub { color: var(--muted); font-size: .85rem; font-weight: 400; }
 .pts { font-family: var(--display); font-weight: 700; color: var(--accent-text); white-space: nowrap; }
