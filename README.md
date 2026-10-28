@@ -1,19 +1,18 @@
 # Escouades 40K
 
-Calculateur de points d'escouade pour **Warhammer 40,000 (11e édition)**, installable sur iPhone/iPad
-et utilisable hors ligne. Les données viennent du projet communautaire
+Calculateur de points d'escouade pour **Warhammer 40,000 (11e édition)**, 
+
+Installable possible sur mobile et desktop
+pour une utilisable hors ligne.
+
+Les escouades restent sur le cache du navigateur de chacun,
+il n'y a pas de compte ni de partage de données.
+
+Les données viennent du projet communautaire :
 [BSData](https://github.com/BSData/wh40k-11e) et sont mises à jour chaque semaine par GitHub Actions.
 
-## Mise en ligne (GitHub Pages)
-
-1. Crée un dépôt sur GitHub (par exemple `escouades40k`), puis envoie-y tous ces fichiers
-   (y compris le dossier caché `.github`).
-2. Dans le dépôt : **Settings → Pages → Build and deployment** → *Source* : **Deploy from a branch**,
-   branche **main**, dossier **/ (root)** → **Save**.
-3. Après une minute environ, l'app est disponible sur `https://TON-PSEUDO.github.io/escouades40k/`.
-4. Dans **Settings → Actions → General → Workflow permissions**, choisis **Read and write permissions**
-   (nécessaire pour que la mise à jour automatique puisse enregistrer les nouvelles données).
-5. Pour tester la mise à jour tout de suite : onglet **Actions → Mise à jour des données (BSData) → Run workflow**.
+## Partager l'app :
+https://valentinbesson.github.io/escouades40k/
 
 ## Installation sur iPhone / iPad
 
@@ -27,14 +26,21 @@ l'installation ne sont pas reprises : il vaut mieux installer l'app avant de com
 ## Utilisation
 
 - **Accueil** : « Chercher une figurine », liste des escouades, puis « Nouvelle escouade » en dessous.
-- **Recherche** : filtres par nom, type et collection (faction). Les boutons **+ / −** ajoutent ou retirent
+  Possibilité de changer l'ordre des Escouades via glisser déposer.
+  
+- **Recherche de figurines** : filtres par nom, type et collection (faction). Les boutons **+ / −** ajoutent ou retirent
   la figurine dans l'escouade choisie en haut de la page.
+
 - **Escouade** : renommer (toucher le titre), changer la quantité, choisir la taille de l'unité
   (par exemple 10 ou 20 figurines, avec les points correspondants) ou retirer une ligne.
 - **Caractéristiques** : l'interrupteur « Afficher les caractéristiques » montre le profil de l'unité et un
   panneau **Armes** dépliable (tir et mêlée : portée, A, CT/CC, F, PA, D et mots-clés). Toutes les armes
   que l'unité peut prendre en option y figurent, pas seulement l'équipement de base.
-
+  
+- **Export / Import** : Il est possible d'exporter et d'importer les caractéristiques d'une Escouade depuis sa page.
+  Importer une sauvegarde d'escouade depuis une page remplace l'entièreté des caractéristiques de l'Escouade. 
+  (Y compris son nom)
+  
 ## Fichiers
 
 | Fichier | Rôle |
@@ -50,16 +56,17 @@ l'installation ne sont pas reprises : il vaut mieux installer l'app avant de com
 
 ## Noms français
 
-La recherche comprend les noms anglais et français. Pour ajouter un nom, ajoute une ligne dans
+La recherche comprend les noms anglais et certains français. 
+
+[ ## pour l'admin :
+Pour ajouter un nom, ajoute une ligne dans
 `data/noms-fr.json` : `"Nom anglais": "Nom français",`. Si le même nom anglais existe dans plusieurs
 collections avec des traductions différentes, préfixe-le : `"Astra Militarum::Nom anglais": "Nom français",`.
-Les unités Legends n'ont pas de nom français.
+Les unités Legends n'ont pas de nom français. ]
 
 ## Partager l'app
 
-Envoie simplement l'adresse du site (`https://TON-PSEUDO.github.io/escouades40k/`) : chaque personne
-l'ouvre dans Safari et l'ajoute à son écran d'accueil. Les escouades restent sur le téléphone de chacun,
-il n'y a pas de compte ni de partage de données.
+Envoie simplement l'adresse du site (`https://valentinbesson.github.io/escouades40k/`) : chaque personne
 
 ## Limites
 
